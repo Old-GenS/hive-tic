@@ -510,11 +510,16 @@
     .hive-logo svg { width: 32px; height: 32px; }
   }
 
-  @media (max-height: 700px) and (min-width: 420px) {
-    .app { gap: 8px; }
+  /* Compact layout for short screens so the whole meadow fits without scrolling. */
+  @media (max-height: 700px) {
+    body { padding-top: max(9px, env(safe-area-inset-top)); padding-bottom: max(9px, env(safe-area-inset-bottom)); }
+    .app { gap: 7px; }
     .tagline { display: none; }
     .hive-logo { width: 42px; height: 42px; }
-    .board-wrap { max-width: 400px; }
+    .hive-logo svg { width: 32px; height: 32px; }
+    .status { min-height: 20px; }
+    footer { gap: 5px; }
+    .hint { display: none; }
   }
 
   @media (prefers-reduced-motion: reduce) {
