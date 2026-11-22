@@ -172,7 +172,8 @@
 
   .music-btn:hover { background: #fffdf6; box-shadow: 0 5px 16px -8px rgba(122,82,26,.5); }
   .music-btn:active { transform: scale(.96); }
-  .music-btn .note { font-size: 1rem; line-height: 1; transition: opacity .2s, transform .2s; }
+  .music-btn .note { display: grid; place-items: center; color: var(--honey-deep); transition: opacity .2s, transform .2s; }
+  .music-btn .note svg { width: 17px; height: 17px; }
   .music-btn .eq {
     display: inline-flex;
     align-items: flex-end;
@@ -574,7 +575,13 @@
       </div>
 
       <button class="music-btn" id="musicBtn" type="button" aria-pressed="true" aria-label="Turn relaxing music off" title="Relaxing music">
-        <span class="note" aria-hidden="true">♪</span>
+        <span class="note" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 18V5l10-2v13"/>
+            <circle cx="6" cy="18" r="3"/>
+            <circle cx="16" cy="16" r="3"/>
+          </svg>
+        </span>
         <span class="eq" aria-hidden="true"><span></span><span></span><span></span></span>
         <span class="label" id="musicLabel">Music on</span>
       </button>
@@ -755,7 +762,6 @@
 
       master = ctx.createGain();
       master.gain.value = 0.85;
-      master.connect(ctx.destination);
 
       const comp = ctx.createDynamicsCompressor();
       comp.threshold.value = -20;
@@ -950,7 +956,10 @@
       musicOn = on;
       if (on) {
         ensure();
-        if (started) fadeMusic(0.17, 1.6);
+        if (started) {
+          fadeMusic(0.17, 1.6);
+          playChord();
+        }
       } else if (ctx) {
         fadeMusic(0.0001, 0.8);
       }
