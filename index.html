@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#fdf1d3">
+<meta name="description" content="Hive Five — a slow, sunny game of tic-tac-toe with bees, blossoms and gentle ambient music.">
+<title>Hive Five · a relaxing tic-tac-toe</title>
+<style>
+  :root {
+    --cream: #fffaf0;
+    --paper: #fffdf7;
+    --honey: #f7b733;
+    --honey-deep: #e39a1f;
+    --amber: #c8791e;
+    --wax: #f1d9a7;
+    --wax-line: #e6cb95;
+    --ink: #3d2b1f;
+    --ink-soft: #7a6248;
+    --leaf: #7f9b68;
+    --blossom: #ef9a48;
+    --blossom-deep: #a85e1e;
+    --shadow: 0 18px 40px -18px rgba(122, 82, 26, .45);
+    --radius: 24px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body { margin: 0; min-height: 100%; }
+
+  body {
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: max(14px, env(safe-area-inset-top)) 16px max(14px, env(safe-area-inset-bottom));
+    font-family: "Avenir Next", "Trebuchet MS", ui-rounded, system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(circle at 18% -5%, #fffdf5 0%, rgba(255, 253, 245, 0) 46%),
+      radial-gradient(circle at 88% 8%, #ffe7ab 0%, rgba(255, 231, 171, 0) 42%),
+      radial-gradient(circle at 50% 115%, #eec97d 0%, rgba(238, 201, 125, 0) 55%),
+      linear-gradient(160deg, #fdf7e7 0%, #fbeecb 52%, #f6dfae 100%);
+    background-attachment: fixed;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Warm honeycomb texture, very quiet under everything. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: .28;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='96' viewBox='0 0 56 96'%3E%3Cg fill='none' stroke='%23dab978' stroke-width='1.1'%3E%3Cpath d='M28 1L53 15.5v29L28 59 3 44.5v-29z'/%3E%3Cpath d='M0 49l25 14.5v29L0 107'/%3E%3Cpath d='M56 49L31 63.5v29L56 107'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 56px 96px;
+    mask-image: linear-gradient(to bottom, rgba(0,0,0,.6), rgba(0,0,0,.18));
+    -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,.6), rgba(0,0,0,.18));
+  }
+
+  .pollen { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+  .pollen i {
+    position: absolute;
+    left: var(--x);
+    bottom: -30px;
+    width: var(--s);
+    height: var(--s);
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #fff6c9, #eab84e 70%, rgba(234,184,78,0));
+    opacity: 0;
+    animation: drift var(--d) linear var(--delay) infinite;
+  }
+
+  @keyframes drift {
+    0%   { transform: translate3d(0, 0, 0) scale(.7); opacity: 0; }
+    12%  { opacity: .7; }
+    60%  { opacity: .45; }
+    100% { transform: translate3d(var(--drift, 30px), -108vh, 0) scale(1.1); opacity: 0; }
+  }
+
+  #fx {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 40;
+  }
+
+  .app {
+    position: relative;
+    z-index: 2;
+    width: min(100%, 520px);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(9px, 1.7vh, 16px);
+    animation: settle .7s cubic-bezier(.2, .8, .2, 1) both;
+  }
+
+  @keyframes settle {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .hive-logo {
+    width: 50px;
+    height: 50px;
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+    background: linear-gradient(145deg, #ffda7c, #f0a91f 70%, #dc8e12);
+    box-shadow: inset 0 2px 4px rgba(255,255,255,.6), inset 0 -5px 8px rgba(157,92,10,.28);
+  }
+
+  .hive-logo svg { width: 36px; height: 36px; }
+
+  h1 {
+    margin: 0;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(1.55rem, 6vw, 2rem);
+    font-weight: 600;
+    letter-spacing: -.02em;
+    line-height: 1;
+  }
+
+  .tagline {
+    margin: 5px 0 0;
+    font-size: clamp(.7rem, 2.7vw, .8rem);
+    color: var(--ink-soft);
+    letter-spacing: .05em;
+    white-space: nowrap;
+  }
+
+  .music-btn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 42px;
+    padding: 0 13px 0 11px;
+    border: 1px solid rgba(175, 129, 55, .3);
+    border-radius: 999px;
+    color: var(--ink);
+    background: rgba(255, 253, 246, .68);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    font: inherit;
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+    cursor: pointer;
+    transition: background .2s, transform .15s, box-shadow .2s;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .music-btn:hover { background: #fffdf6; box-shadow: 0 5px 16px -8px rgba(122,82,26,.5); }
+  .music-btn:active { transform: scale(.96); }
+  .music-btn .note { font-size: 1rem; line-height: 1; transition: opacity .2s, transform .2s; }
+  .music-btn .eq {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 12px;
+    width: 12px;
+  }
+  .music-btn .eq span {
+    display: block;
+    width: 2px;
+    height: 100%;
+    border-radius: 2px;
+    background: var(--honey-deep);
+    transform-origin: bottom;
+    animation: eq 1.6s ease-in-out infinite;
+  }
+  .music-btn .eq span:nth-child(2) { animation-delay: -.55s; height: 70%; }
+  .music-btn .eq span:nth-child(3) { animation-delay: -1.05s; height: 45%; }
+
+  @keyframes eq {
+    0%, 100% { transform: scaleY(.35); }
+    50%      { transform: scaleY(1); }
+  }
+
+  .music-btn[aria-pressed="false"] .eq span { animation-play-state: paused; transform: scaleY(.28); background: #b8a68a; }
+  .music-btn[aria-pressed="false"] .note { opacity: .5; }
+
+  .controls {
+    display: flex;
+    justify-content: center;
+  }
+
+  .segmented {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 4px;
+    width: min(100%, 340px);
+    border: 1px solid rgba(175, 129, 55, .25);
+    border-radius: 999px;
+    background: rgba(255, 251, 240, .6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+
+  .segmented button {
+    min-height: 36px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink-soft);
+    font: inherit;
+    font-size: clamp(.72rem, 2.7vw, .8rem);
+    font-weight: 700;
+    letter-spacing: .015em;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color .2s, background .2s, box-shadow .2s;
+  }
+
+  .segmented button[aria-pressed="true"] {
+    color: var(--ink);
+    background: #fffdf6;
+    box-shadow: 0 2px 8px -3px rgba(122, 82, 26, .38), inset 0 0 0 1px rgba(247, 183, 51, .38);
+  }
+
+  .scoreboard {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .score-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+    padding: 9px 14px;
+    border: 1px solid rgba(175, 129, 55, .19);
+    border-radius: 16px;
+    background: rgba(255, 252, 243, .62);
+  }
+
+  .score-card .who {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    font-size: .74rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .score-card .who svg { width: 21px; height: 21px; flex: 0 0 auto; }
+  .score-card .who span { overflow: hidden; text-overflow: ellipsis; }
+
+  .score-card .points {
+    font-family: Georgia, serif;
+    font-size: 1.35rem;
+    line-height: 1;
+    color: var(--ink);
+    transition: transform .2s;
+  }
+
+  .score-card .points.bump { animation: bump .45s cubic-bezier(.2, .8, .2, 1); }
+  @keyframes bump { 40% { transform: scale(1.45); } }
+
+  .round-chip {
+    align-self: center;
+    padding: 0 2px;
+    font-size: .66rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #a1845d;
+    white-space: nowrap;
+  }
+
+  .status {
+    min-height: 24px;
+    margin: 0;
+    padding: 0 8px;
+    text-align: center;
+    font-size: clamp(.82rem, 3.2vw, .94rem);
+    font-weight: 600;
+    color: var(--ink-soft);
+    transition: color .25s;
+  }
+
+  .status strong { color: var(--ink); }
+  .status.win { color: var(--amber); }
+
+  .board-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  .board {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: clamp(6px, 1.8vw, 10px);
+    aspect-ratio: 1;
+    padding: clamp(8px, 2.2vw, 12px);
+    border: 1px solid rgba(174, 126, 48, .32);
+    border-radius: clamp(26px, 7vw, 38px);
+    background:
+      linear-gradient(145deg, rgba(255, 250, 236, .95), rgba(250, 231, 190, .9));
+    box-shadow:
+      var(--shadow),
+      inset 0 2px 0 rgba(255, 255, 255, .8),
+      inset 0 -8px 18px rgba(181, 125, 41, .1);
+  }
+
+  /* Faint honeycomb watermark in the board frame. */
+  .board::before {
+    content: "";
+    position: absolute;
+    inset: 5px;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: .5;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='46' height='80' viewBox='0 0 46 80'%3E%3Cg fill='none' stroke='%23e2c07a' stroke-width='1' opacity='.55'%3E%3Cpath d='M23 1l21 12.2v24.5L23 50 2 37.7V13.2z'/%3E%3Cpath d='M0 41l23 13.3v25.4M46 41L23 54.3'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 46px 80px;
+  }
+
+  .cell {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    border: 1px solid rgba(190, 148, 76, .28);
+    border-radius: clamp(18px, 5vw, 28px);
+    background:
+      radial-gradient(circle at 30% 20%, #fffef9 0%, #fffaf0 52%, #fdf2d9 100%);
+    box-shadow:
+      0 5px 12px -7px rgba(122, 82, 26, .4),
+      inset 0 1px 0 #fff;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+    transition: transform .16s ease, box-shadow .2s ease, background .25s ease, border-color .25s ease;
+    overflow: hidden;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* Inner hex outline gives each tile a honeycomb feel. */
+  .cell::before {
+    content: "";
+    position: absolute;
+    inset: 7%;
+    clip-path: polygon(25% 4%, 75% 4%, 98% 50%, 75% 96%, 25% 96%, 2% 50%);
+    border: 1.5px solid rgba(224, 196, 139, .45);
+    pointer-events: none;
+    transition: border-color .25s;
+  }
+
+  @media (hover: hover) {
+    .cell:not(:disabled):hover {
+      transform: translateY(-2px);
+      border-color: rgba(226, 174, 72, .6);
+      box-shadow:
+        0 10px 18px -8px rgba(122, 82, 26, .45),
+        inset 0 1px 0 #fff;
+    }
+    .cell:not(:disabled):hover::before { border-color: rgba(226, 174, 72, .8); }
+  }
+
+  .cell:not(:disabled):active { transform: scale(.965); }
+  .cell:disabled { cursor: default; }
+  .cell:focus-visible {
+    outline: 3px solid rgba(214, 138, 26, .65);
+    outline-offset: 2px;
+  }
+
+  .cell[data-mark="bee"] { background: radial-gradient(circle at 50% 42%, #fffdf4, #fff5da); }
+  .cell[data-mark="blossom"] { background: radial-gradient(circle at 50% 42%, #fffdf6, #fff2e3); }
+
+  .cell-mark {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 78%;
+    height: 78%;
+    pointer-events: none;
+  }
+
+  .cell-mark svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    filter: drop-shadow(0 3px 2px rgba(103, 64, 9, .16));
+  }
+
+  .cell-mark.pop svg { animation: markIn .42s cubic-bezier(.18, .9, .25, 1.3) both; }
+
+  @keyframes markIn {
+    0%   { transform: scale(.4) rotate(-10deg); opacity: 0; }
+    65%  { transform: scale(1.06) rotate(2deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0); opacity: 1; }
+  }
+
+  .cell.win {
+    border-color: rgba(226, 156, 26, .85);
+    background: radial-gradient(circle at 50% 45%, #fffdf2, #ffe7a6);
+    animation: winGlow 1.8s ease-in-out infinite;
+  }
+
+  .cell.win::before { border-color: rgba(218, 147, 22, .75); }
+
+  @keyframes winGlow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(247, 183, 51, 0), inset 0 0 18px rgba(247, 183, 51, .18); }
+    50%      { box-shadow: 0 0 22px 2px rgba(247, 183, 51, .42), inset 0 0 22px rgba(247, 183, 51, .32); }
+  }
+
+  .board.dim .cell:not(.win) { opacity: .58; }
+
+  footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 9px;
+  }
+
+  .new-round {
+    width: min(100%, 300px);
+    min-height: 48px;
+    border: 0;
+    border-radius: 999px;
+    color: #4b3108;
+    background: linear-gradient(145deg, #ffd66e 0%, #f6b12a 58%, #ec9f14 100%);
+    box-shadow:
+      0 8px 18px -8px rgba(184, 113, 8, .8),
+      inset 0 1px 0 rgba(255, 255, 255, .7),
+      inset 0 -2px 0 rgba(156, 91, 4, .2);
+    font: inherit;
+    font-size: .9rem;
+    font-weight: 800;
+    letter-spacing: .03em;
+    cursor: pointer;
+    transition: transform .15s, box-shadow .2s, filter .2s;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .new-round:hover { filter: brightness(1.03); box-shadow: 0 12px 22px -8px rgba(184, 113, 8, .8), inset 0 1px 0 rgba(255,255,255,.7); }
+  .new-round:active { transform: scale(.975); }
+  .new-round:focus-visible { outline: 3px solid rgba(61, 43, 31, .5); outline-offset: 3px; }
+
+  .hint {
+    margin: 0;
+    max-width: 360px;
+    text-align: center;
+    font-size: .7rem;
+    line-height: 1.45;
+    color: #987b56;
+    letter-spacing: .015em;
+  }
+
+  .reset-link {
+    padding: 2px 8px;
+    border: 0;
+    background: none;
+    color: #a4865f;
+    font: inherit;
+    font-size: .7rem;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+  .reset-link:hover { color: var(--ink-soft); }
+
+  @media (max-width: 390px) {
+    .music-btn { padding: 0 10px; }
+    .music-btn .label { display: none; }
+    .score-card { padding: 8px 10px; }
+    .score-card .who { font-size: .66rem; letter-spacing: .02em; }
+    .score-card .who svg { width: 18px; height: 18px; }
+    .tagline { font-size: .67rem; }
+    .hive-logo { width: 44px; height: 44px; }
+    .hive-logo svg { width: 32px; height: 32px; }
+  }
+
+  @media (max-height: 700px) and (min-width: 420px) {
+    .app { gap: 8px; }
+    .tagline { display: none; }
+    .hive-logo { width: 42px; height: 42px; }
+    .board-wrap { max-width: 400px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: .001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .001ms !important;
+    }
+    .pollen { display: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="pollen" aria-hidden="true">
+    <i style="--x:6%;  --s:7px; --d:20s; --delay:-3s;  --drift:46px"></i>
+    <i style="--x:18%; --s:4px; --d:26s; --delay:-17s; --drift:-32px"></i>
+    <i style="--x:31%; --s:6px; --d:23s; --delay:-9s;  --drift:60px"></i>
+    <i style="--x:45%; --s:3px; --d:29s; --delay:-22s; --drift:-44px"></i>
+    <i style="--x:58%; --s:8px; --d:21s; --delay:-14s; --drift:38px"></i>
+    <i style="--x:72%; --s:5px; --d:25s; --delay:-6s;  --drift:-54px"></i>
+    <i style="--x:84%; --s:7px; --d:19s; --delay:-11s; --drift:30px"></i>
+    <i style="--x:94%; --s:4px; --d:27s; --delay:-19s; --drift:-38px"></i>
+  </div>
+
+  <canvas id="fx" aria-hidden="true"></canvas>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <clipPath id="beeBodyClip">
+        <ellipse cx="50" cy="58" rx="21" ry="25"></ellipse>
+      </clipPath>
+    </defs>
+  </svg>
+
+  <main class="app">
+    <header>
+      <div class="brand">
+        <div class="hive-logo" aria-hidden="true">
+          <svg viewBox="0 0 100 100">
+            <ellipse cx="34" cy="37" rx="13" ry="19" transform="rotate(-28 34 37)" fill="#fffdf4" stroke="#b48134" stroke-width="3"/>
+            <ellipse cx="66" cy="37" rx="13" ry="19" transform="rotate(28 66 37)" fill="#fffdf4" stroke="#b48134" stroke-width="3"/>
+            <ellipse cx="50" cy="58" rx="20" ry="24" fill="#f7b733" stroke="#3d2b1f" stroke-width="4"/>
+            <g clip-path="url(#beeBodyClip)">
+              <rect x="25" y="47" width="50" height="6.5" fill="#3d2b1f"/>
+              <rect x="25" y="59" width="50" height="6.5" fill="#3d2b1f"/>
+              <rect x="25" y="71" width="50" height="6.5" fill="#3d2b1f"/>
+            </g>
+            <circle cx="50" cy="31" r="10" fill="#3d2b1f"/>
+            <circle cx="46" cy="29" r="1.7" fill="#ffe8a3"/>
+            <circle cx="54" cy="29" r="1.7" fill="#ffe8a3"/>
+            <path d="M43 23C39 15 35 14 31 16M57 23c4-8 8-9 12-7" fill="none" stroke="#3d2b1f" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div>
+          <h1>Hive Five</h1>
+          <p class="tagline">a slow game in the sunshine</p>
+        </div>
+      </div>
+
+      <button class="music-btn" id="musicBtn" type="button" aria-pressed="true" aria-label="Turn relaxing music off" title="Relaxing music">
+        <span class="note" aria-hidden="true">♪</span>
+        <span class="eq" aria-hidden="true"><span></span><span></span><span></span></span>
+        <span class="label" id="musicLabel">Music on</span>
+      </button>
+    </header>
+
+    <section class="controls" aria-label="Game mode">
+      <div class="segmented" role="group" aria-label="Choose game mode">
+        <button type="button" data-mode="ai" aria-pressed="true">vs Hive Mind</button>
+        <button type="button" data-mode="friend" aria-pressed="false">2 Players</button>
+      </div>
+    </section>
+
+    <section class="scoreboard" aria-label="Score">
+      <div class="score-card">
+        <span class="who">
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            <ellipse cx="50" cy="58" rx="21" ry="25" fill="#f7b733" stroke="#3d2b1f" stroke-width="5"/>
+            <g clip-path="url(#beeBodyClip)">
+              <rect x="24" y="48" width="52" height="7" fill="#3d2b1f"/>
+              <rect x="24" y="60" width="52" height="7" fill="#3d2b1f"/>
+              <rect x="24" y="72" width="52" height="7" fill="#3d2b1f"/>
+            </g>
+            <ellipse cx="34" cy="34" rx="11" ry="16" transform="rotate(-30 34 34)" fill="#fffdf4" stroke="#b48134" stroke-width="4"/>
+            <ellipse cx="66" cy="34" rx="11" ry="16" transform="rotate(30 66 34)" fill="#fffdf4" stroke="#b48134" stroke-width="4"/>
+            <circle cx="50" cy="30" r="9" fill="#3d2b1f"/>
+          </svg>
+          <span>Bees</span>
+        </span>
+        <span class="points" id="beeScore">0</span>
+      </div>
+
+      <div class="round-chip" id="roundLabel">Round 1</div>
+
+      <div class="score-card">
+        <span class="who">
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            <g fill="#f4a259" stroke="#a85e1e" stroke-width="3">
+              <ellipse cx="50" cy="25" rx="13" ry="17"/>
+              <ellipse cx="50" cy="25" rx="13" ry="17" transform="rotate(72 50 50)"/>
+              <ellipse cx="50" cy="25" rx="13" ry="17" transform="rotate(144 50 50)"/>
+              <ellipse cx="50" cy="25" rx="13" ry="17" transform="rotate(216 50 50)"/>
+              <ellipse cx="50" cy="25" rx="13" ry="17" transform="rotate(288 50 50)"/>
+            </g>
+            <circle cx="50" cy="50" r="14" fill="#f9d67a" stroke="#a85e1e" stroke-width="3"/>
+          </svg>
+          <span>Blossoms</span>
+        </span>
+        <span class="points" id="blossomScore">0</span>
+      </div>
+    </section>
+
+    <p class="status" id="status" role="status" aria-live="polite">Your turn — place a bee.</p>
+
+    <div class="board-wrap">
+      <div class="board" id="board" role="group" aria-label="Tic-tac-toe board"></div>
+    </div>
+
+    <footer>
+      <button class="new-round" id="newRound" type="button">New round</button>
+      <p class="hint">Tap a cell to place your mark. Three in a row wins the meadow.</p>
+      <button class="reset-link" id="resetScores" type="button">Reset scores</button>
+    </footer>
+  </main>
+
+<script>
+(() => {
+  "use strict";
+
+  // ---------------------------------------------------------------- data ---
+  const LINES = [
+    [0, 1, 2], [3, 4, 5], [6, 7, 8],
+    [0, 3, 6], [1, 4, 7], [2, 5, 8],
+    [0, 4, 8], [2, 4, 6]
+  ];
+
+  const NAMES = { bee: "Bees", blossom: "Blossoms" };
+  const AI_MODE = "ai";
+  const FRIEND_MODE = "friend";
+
+  const state = {
+    board: Array(9).fill(null),
+    turn: "bee",
+    starter: "bee",
+    mode: AI_MODE,
+    scores: { bee: 0, blossom: 0 },
+    round: 1,
+    over: false,
+    result: null,
+    busy: false,
+    musicOn: true,
+    audioStarted: false,
+    aiToken: 0
+  };
+
+  const other = mark => (mark === "bee" ? "blossom" : "bee");
+
+  // ---------------------------------------------------------------- marks ---
+  const MARKS = {
+    bee: `
+      <svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+        <ellipse cx="31" cy="39" rx="14" ry="21" transform="rotate(-28 31 39)" fill="#fffdf4" stroke="#c0944a" stroke-width="3"/>
+        <ellipse cx="69" cy="39" rx="14" ry="21" transform="rotate(28 69 39)" fill="#fffdf4" stroke="#c0944a" stroke-width="3"/>
+        <ellipse cx="50" cy="58" rx="21" ry="25" fill="#f7b733" stroke="#3d2b1f" stroke-width="4"/>
+        <g clip-path="url(#beeBodyClip)">
+          <rect x="24" y="46" width="52" height="7" fill="#3d2b1f"/>
+          <rect x="24" y="58" width="52" height="7" fill="#3d2b1f"/>
+          <rect x="24" y="70" width="52" height="7" fill="#3d2b1f"/>
+        </g>
+        <path d="M35 55c4-3 26-3 30 0" fill="none" stroke="#ffd77a" stroke-width="2" stroke-linecap="round" opacity=".65"/>
+        <circle cx="50" cy="31" r="11" fill="#3d2b1f"/>
+        <circle cx="45.5" cy="29" r="1.8" fill="#ffe8a3"/>
+        <circle cx="54.5" cy="29" r="1.8" fill="#ffe8a3"/>
+        <path d="M43 23c-4-8-8-9-12-7M57 23c4-8 8-9 12-7" fill="none" stroke="#3d2b1f" stroke-width="3" stroke-linecap="round"/>
+        <path d="M48 83l2 7 2-7" fill="#3d2b1f"/>
+      </svg>`,
+    blossom: `
+      <svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+        <g fill="#f4a259" stroke="#a85e1e" stroke-width="3" stroke-linejoin="round">
+          <ellipse cx="50" cy="24" rx="14" ry="19"/>
+          <ellipse cx="50" cy="24" rx="14" ry="19" transform="rotate(72 50 50)"/>
+          <ellipse cx="50" cy="24" rx="14" ry="19" transform="rotate(144 50 50)"/>
+          <ellipse cx="50" cy="24" rx="14" ry="19" transform="rotate(216 50 50)"/>
+          <ellipse cx="50" cy="24" rx="14" ry="19" transform="rotate(288 50 50)"/>
+        </g>
+        <circle cx="50" cy="50" r="15.5" fill="#f9d67a" stroke="#a85e1e" stroke-width="3"/>
+        <circle cx="45" cy="45" r="1.8" fill="#a85e1e" opacity=".65"/>
+        <circle cx="55" cy="47" r="1.6" fill="#a85e1e" opacity=".55"/>
+        <circle cx="49" cy="55" r="1.7" fill="#a85e1e" opacity=".55"/>
+        <path d="M44 38c3-2 7-2 9 0" fill="none" stroke="#fff3c9" stroke-width="2" stroke-linecap="round" opacity=".9"/>
+      </svg>`
+  };
+
+  // ----------------------------------------------------------------- audio ---
+  const Sound = (() => {
+    let ctx = null;
+    let master = null;
+    let musicBus = null;
+    let sfxBus = null;
+    let reverb = null;
+    let started = false;
+    let musicOn = true;
+    let chordTimer = null;
+    let pluckTimer = null;
+    let chordIndex = 0;
+
+    // D major pentatonic — bright but unhurried.
+    const SCALE = [293.66, 329.63, 369.99, 440.0, 493.88, 587.33, 659.25, 739.99, 880.0];
+    const CHORDS = [
+      [146.83, 220.0, 277.18, 329.63], // Dmaj9 colours
+      [123.47, 185.0, 246.94, 293.66], // Bm7
+      [98.0, 146.83, 196.0, 246.94],   // Gmaj
+      [110.0, 164.81, 220.0, 293.66]   // Asus
+    ];
+
+    function makeImpulse(seconds, decay) {
+      const rate = ctx.sampleRate;
+      const len = Math.floor(rate * seconds);
+      const buffer = ctx.createBuffer(2, len, rate);
+      for (let ch = 0; ch < 2; ch++) {
+        const data = buffer.getChannelData(ch);
+        for (let i = 0; i < len; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+        }
+      }
+      return buffer;
+    }
+
+    function init() {
+      if (ctx) return true;
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return false;
+
+      try {
+        ctx = new AC();
+      } catch (err) {
+        return false;
+      }
+
+      master = ctx.createGain();
+      master.gain.value = 0.85;
+      master.connect(ctx.destination);
+
+      const comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -20;
+      comp.knee.value = 22;
+      comp.ratio.value = 3;
+      comp.attack.value = 0.03;
+      comp.release.value = 0.5;
+      comp.connect(ctx.destination);
+      master.connect(comp);
+
+      reverb = ctx.createConvolver();
+      reverb.buffer = makeImpulse(3.2, 2.6);
+      const wet = ctx.createGain();
+      wet.gain.value = 0.34;
+      reverb.connect(wet);
+      wet.connect(master);
+
+      musicBus = ctx.createGain();
+      musicBus.gain.value = 0.0001;
+      musicBus.connect(master);
+      musicBus.connect(reverb);
+
+      sfxBus = ctx.createGain();
+      sfxBus.gain.value = 0.5;
+      sfxBus.connect(master);
+      sfxBus.connect(reverb);
+
+      return true;
+    }
+
+    function ensure() {
+      if (!init()) return;
+      if (ctx.state === "suspended") ctx.resume().catch(() => {});
+      if (musicOn) startMusic();
+    }
+
+    function startMusic() {
+      if (!init()) return;
+      if (ctx.state === "suspended") ctx.resume().catch(() => {});
+      if (!started) {
+        started = true;
+        playChord();
+        chordTimer = setInterval(playChord, 11000);
+        schedulePluck();
+      }
+      fadeMusic(musicOn ? 0.17 : 0.0001, 2.5);
+    }
+
+    function fadeMusic(to, time = 1.2) {
+      if (!ctx || !musicBus) return;
+      const now = ctx.currentTime;
+      const gain = musicBus.gain;
+      gain.cancelScheduledValues(now);
+      gain.setValueAtTime(Math.max(gain.value, 0.0001), now);
+      gain.exponentialRampToValueAtTime(Math.max(to, 0.0001), now + time);
+    }
+
+    function playChord() {
+      if (!ctx || !musicOn) return;
+      const t = ctx.currentTime + 0.08;
+      const chord = CHORDS[chordIndex++ % CHORDS.length];
+      const dur = 13.5;
+
+      chord.forEach((freq, i) => {
+        const detunes = i === 0 ? [-5, 5] : [-3, 3];
+        detunes.forEach((detune, j) => {
+          const osc = ctx.createOscillator();
+          osc.type = i === 0 ? "sine" : "triangle";
+          osc.frequency.value = freq;
+          osc.detune.value = detune + (j === 0 ? -2 : 2);
+
+          const amp = ctx.createGain();
+          const level = (i === 0 ? 0.045 : 0.022) / detunes.length;
+          amp.gain.setValueAtTime(0.0001, t);
+          amp.gain.linearRampToValueAtTime(level, t + 4.2);
+          amp.gain.setValueAtTime(level, t + dur - 4.5);
+          amp.gain.linearRampToValueAtTime(0.0001, t + dur);
+
+          const filter = ctx.createBiquadFilter();
+          filter.type = "lowpass";
+          filter.frequency.value = 760 + i * 120;
+          filter.Q.value = 0.35;
+
+          osc.connect(amp);
+          amp.connect(filter);
+          filter.connect(musicBus);
+          osc.start(t);
+          osc.stop(t + dur + 0.1);
+        });
+      });
+    }
+
+    function schedulePluck() {
+      clearTimeout(pluckTimer);
+      pluckTimer = setTimeout(() => {
+        if (musicOn && ctx) playPluck();
+        schedulePluck();
+      }, 1500 + Math.random() * 3200);
+    }
+
+    function playPluck() {
+      if (!ctx || !musicOn) return;
+      const t = ctx.currentTime + 0.03;
+      const freq = SCALE[Math.floor(Math.random() * SCALE.length)];
+      const pan = (Math.random() * 2 - 1) * 0.55;
+
+      const osc = ctx.createOscillator();
+      osc.type = "triangle";
+      osc.frequency.value = freq;
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.055, t + 0.025);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 2.8);
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.value = 2200;
+      filter.Q.value = 0.4;
+
+      osc.connect(gain);
+      gain.connect(filter);
+
+      let tail = filter;
+      if (ctx.createStereoPanner) {
+        const panner = ctx.createStereoPanner();
+        panner.pan.value = pan;
+        filter.connect(panner);
+        tail = panner;
+      }
+      tail.connect(musicBus);
+
+      // A very quiet octave sparkle.
+      const shimmer = ctx.createOscillator();
+      shimmer.type = "sine";
+      shimmer.frequency.value = freq * 2;
+      const shimGain = ctx.createGain();
+      shimGain.gain.setValueAtTime(0.0001, t);
+      shimGain.gain.exponentialRampToValueAtTime(0.012, t + 0.02);
+      shimGain.gain.exponentialRampToValueAtTime(0.0001, t + 1.6);
+      shimmer.connect(shimGain);
+      shimGain.connect(tail);
+
+      osc.start(t); osc.stop(t + 3);
+      shimmer.start(t); shimmer.stop(t + 1.8);
+    }
+
+    function tone(freq, start, dur, vol, type = "sine") {
+      if (!ctx) return;
+      const osc = ctx.createOscillator();
+      osc.type = type;
+      osc.frequency.value = freq;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(vol, start + 0.018);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+      osc.connect(gain);
+      gain.connect(sfxBus);
+      osc.start(start);
+      osc.stop(start + dur + 0.05);
+    }
+
+    function place(mark) {
+      if (!init()) return;
+      if (ctx.state === "suspended") ctx.resume().catch(() => {});
+      const t = ctx.currentTime + 0.01;
+      const notes = mark === "bee" ? [523.25, 783.99] : [440.0, 349.23];
+      tone(notes[0], t, 0.6, 0.055, "sine");
+      tone(notes[1], t + 0.07, 0.8, 0.03, "triangle");
+    }
+
+    function win() {
+      if (!init()) return;
+      if (ctx.state === "suspended") ctx.resume().catch(() => {});
+      const t = ctx.currentTime + 0.05;
+      [587.33, 739.99, 880.0, 1174.66].forEach((freq, i) => {
+        tone(freq, t + i * 0.13, 1.4, 0.045, "triangle");
+        tone(freq / 2, t + i * 0.13, 1.6, 0.018, "sine");
+      });
+    }
+
+    function draw() {
+      if (!init()) return;
+      if (ctx.state === "suspended") ctx.resume().catch(() => {});
+      const t = ctx.currentTime + 0.05;
+      [440.0, 369.99, 293.66].forEach((freq, i) => {
+        tone(freq, t + i * 0.16, 1.5, 0.035, "sine");
+      });
+    }
+
+    function setMusic(on) {
+      musicOn = on;
+      if (on) {
+        ensure();
+        if (started) fadeMusic(0.17, 1.6);
+      } else if (ctx) {
+        fadeMusic(0.0001, 0.8);
+      }
+    }
+
+    return { ensure, place, win, draw, setMusic, init };
+  })();
+
+  // ------------------------------------------------------------------ fx ---
+  const fxCanvas = document.getElementById("fx");
+  const fx = fxCanvas.getContext("2d");
+  let particles = [];
+  let fxRaf = null;
+
+  function sizeFx() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    fxCanvas.width = Math.floor(window.innerWidth * dpr);
+    fxCanvas.height = Math.floor(window.innerHeight * dpr);
+    fxCanvas.style.width = window.innerWidth + "px";
+    fxCanvas.style.height = window.innerHeight + "px";
+    fx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function burst(cx, cy, amount = 60, calm = false) {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!fxCanvas.width) sizeFx();
+    const colors = calm
+      ? ["#d8c49a", "#c7b083", "#e7d7b3"]
+      : ["#f7b733", "#ffd66e", "#ef9a48", "#fff3c9", "#b7c89b"];
+    for (let i = 0; i < amount; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 2.4 + Math.random() * (calm ? 3.2 : 6.4);
+      particles.push({
+        x: cx,
+        y: cy,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 2.2,
+        size: 2 + Math.random() * 4,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        life: 1,
+        decay: 0.008 + Math.random() * 0.012,
+        spin: (Math.random() - 0.5) * 0.18,
+        angle: Math.random() * Math.PI
+      });
+    }
+    if (!fxRaf) fxRaf = requestAnimationFrame(stepFx);
+  }
+
+  function stepFx() {
+    fx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.vy += 0.075;
+      p.vx *= 0.994;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.angle += p.spin;
+      p.life -= p.decay;
+      if (p.life <= 0 || p.y > window.innerHeight + 30) {
+        particles.splice(i, 1);
+        continue;
+      }
+      fx.globalAlpha = Math.max(0, Math.min(1, p.life * 1.4));
+      fx.fillStyle = p.color;
+      fx.beginPath();
+      fx.ellipse(p.x, p.y, p.size, p.size * 0.62, p.angle, 0, Math.PI * 2);
+      fx.fill();
+    }
+    fx.globalAlpha = 1;
+    if (particles.length) {
+      fxRaf = requestAnimationFrame(stepFx);
+    } else {
+      fxRaf = null;
+      fx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    }
+  }
+
+  // ------------------------------------------------------------------ dom ---
+  const boardEl = document.getElementById("board");
+  const statusEl = document.getElementById("status");
+  const beeScoreEl = document.getElementById("beeScore");
+  const blossomScoreEl = document.getElementById("blossomScore");
+  const roundLabel = document.getElementById("roundLabel");
+  const newRoundBtn = document.getElementById("newRound");
+  const resetScoresBtn = document.getElementById("resetScores");
+  const musicBtn = document.getElementById("musicBtn");
+  const musicLabel = document.getElementById("musicLabel");
+  const modeButtons = Array.from(document.querySelectorAll("[data-mode]"));
+  const cells = [];
+
+  for (let i = 0; i < 9; i++) {
+    const cell = document.createElement("button");
+    cell.type = "button";
+    cell.className = "cell";
+    cell.dataset.index = String(i);
+    cell.innerHTML = '<span class="cell-mark"></span>';
+    cell.addEventListener("click", () => play(i));
+    boardEl.appendChild(cell);
+    cells.push(cell);
+  }
+
+  // --------------------------------------------------------------- render ---
+  function playerLabel(mark) {
+    if (state.mode === AI_MODE) {
+      return mark === "bee" ? "You" : "The Hive Mind";
+    }
+    return NAMES[mark];
+  }
+
+  function statusText() {
+    if (state.over && state.result) {
+      const winner = state.result.winner;
+      if (winner === "draw") return "A peaceful draw. The meadow rests.";
+      if (state.mode === AI_MODE) {
+        return winner === "bee"
+          ? "You win! The hive is buzzing."
+          : "The Hive Mind found a path. Try again!";
+      }
+      return `${NAMES[winner]} win the meadow!`;
+    }
+    if (state.busy) return "The hive is thinking…";
+    if (state.mode === FRIEND_MODE) return `${NAMES[state.turn]}’ turn — pick a cell.`;
+    return state.turn === "bee" ? "Your turn — place a bee." : "The hive is thinking…";
+  }
+
+  function render() {
+    const winning = state.result && state.result.line ? state.result.line : [];
+
+    cells.forEach((cell, i) => {
+      const mark = state.board[i];
+      const markEl = cell.querySelector(".cell-mark");
+      const previous = cell.dataset.mark || "";
+
+      if (previous !== (mark || "")) {
+        cell.dataset.mark = mark || "";
+        markEl.innerHTML = mark ? MARKS[mark] : "";
+        if (mark) {
+          markEl.classList.remove("pop");
+          void markEl.offsetWidth;
+          markEl.classList.add("pop");
+        }
+      }
+
+      cell.classList.toggle("win", winning.includes(i));
+      cell.disabled = state.over || state.busy || (state.mode === AI_MODE && state.turn === "blossom");
+      cell.setAttribute(
+        "aria-label",
+        mark
+          ? `Row ${Math.floor(i / 3) + 1}, column ${i % 3 + 1}: ${NAMES[mark]}`
+          : `Row ${Math.floor(i / 3) + 1}, column ${i % 3 + 1}: empty`
+      );
+    });
+
+    boardEl.classList.toggle("dim", Boolean(state.over && state.result && state.result.winner !== "draw"));
+    statusEl.textContent = statusText();
+    statusEl.classList.toggle("win", Boolean(state.over && state.result && state.result.winner !== "draw"));
+    beeScoreEl.textContent = String(state.scores.bee);
+    blossomScoreEl.textContent = String(state.scores.blossom);
+    roundLabel.textContent = `Round ${state.round}`;
+    newRoundBtn.textContent = state.over ? "Play again" : "New round";
+  }
+
+  function bump(el) {
+    el.classList.remove("bump");
+    void el.offsetWidth;
+    el.classList.add("bump");
+  }
+
+  // ---------------------------------------------------------------- rules ---
+  function evaluate(board) {
+    for (const line of LINES) {
+      const [a, b, c] = line;
+      if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+        return { winner: board[a], line };
+      }
+    }
+    if (board.every(Boolean)) return { winner: "draw", line: null };
+    return null;
+  }
+
+  function play(index, byAI = false) {
+    if (state.over || state.busy || state.board[index]) return;
+    if (!byAI && state.mode === AI_MODE && state.turn !== "bee") return;
+
+    Sound.ensure();
+    const mark = state.turn;
+    state.board[index] = mark;
+    Sound.place(mark);
+
+    const result = evaluate(state.board);
+    if (result) {
+      finish(result);
+      return;
+    }
+
+    state.turn = other(mark);
+    render();
+
+    if (state.mode === AI_MODE && state.turn === "blossom") {
+      queueAI();
+    }
+  }
+
+  function finish(result) {
+    state.over = true;
+    state.result = result;
+
+    if (result.winner === "draw") {
+      Sound.draw();
+    } else {
+      state.scores[result.winner] += 1;
+      Sound.win();
+      bump(result.winner === "bee" ? beeScoreEl : blossomScoreEl);
+    }
+
+    render();
+
+    const rect = boardEl.getBoundingClientRect();
+    setTimeout(() => {
+      burst(rect.left + rect.width / 2, rect.top + rect.height * 0.46,
+        result.winner === "draw" ? 30 : 70, result.winner === "draw");
+    }, 130);
+  }
+
+  // ------------------------------------------------------------------- ai ---
+  function minimax(board, mark, depth) {
+    const result = evaluate(board);
+    if (result) {
+      if (result.winner === "blossom") return 10 - depth;
+      if (result.winner === "bee") return depth - 10;
+      return 0;
+    }
+
+    let best = mark === "blossom" ? -Infinity : Infinity;
+    for (let i = 0; i < 9; i++) {
+      if (board[i]) continue;
+      board[i] = mark;
+      const score = minimax(board, other(mark), depth + 1);
+      board[i] = null;
+      best = mark === "blossom" ? Math.max(best, score) : Math.min(best, score);
+    }
+    return best;
+  }
+
+  function pickAIMove() {
+    const empty = [];
+    for (let i = 0; i < 9; i++) if (!state.board[i]) empty.push(i);
+    if (!empty.length) return null;
+
+    // Mostly optimal, with a small daydream window so the hive stays friendly.
+    if (Math.random() < 0.12) {
+      return empty[Math.floor(Math.random() * empty.length)];
+    }
+
+    let bestScore = -Infinity;
+    let bestMoves = [];
+    const board = state.board.slice();
+
+    for (const i of empty) {
+      board[i] = "blossom";
+      const score = minimax(board, "bee", 1);
+      board[i] = null;
+      if (score > bestScore) {
+        bestScore = score;
+        bestMoves = [i];
+      } else if (score === bestScore) {
+        bestMoves.push(i);
+      }
+    }
+    return bestMoves[Math.floor(Math.random() * bestMoves.length)];
+  }
+
+  function queueAI() {
+    const token = ++state.aiToken;
+    state.busy = true;
+    render();
+
+    const delay = 600 + Math.random() * 450;
+    setTimeout(() => {
+      if (
+        token !== state.aiToken ||
+        state.over ||
+        state.mode !== AI_MODE ||
+        state.turn !== "blossom"
+      ) {
+        return;
+      }
+      state.busy = false;
+      const move = pickAIMove();
+      if (move !== null) play(move, true);
+      else render();
+    }, delay);
+  }
+
+  // --------------------------------------------------------------- rounds ---
+  function resetBoard({ first = false } = {}) {
+    state.aiToken++;
+    state.board = Array(9).fill(null);
+    state.result = null;
+    state.over = false;
+    state.busy = false;
+
+    if (first) {
+      state.round = 1;
+      state.starter = "bee";
+    } else {
+      state.round += 1;
+      state.starter = other(state.starter);
+    }
+    state.turn = state.starter;
+
+    particles = [];
+    fx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+    render();
+
+    if (state.mode === AI_MODE && state.turn === "blossom") {
+      queueAI();
+    }
+  }
+
+  function setMode(mode) {
+    if (state.mode === mode) return;
+    state.mode = mode;
+    state.scores = { bee: 0, blossom: 0 };
+    modeButtons.forEach(btn => {
+      btn.setAttribute("aria-pressed", String(btn.dataset.mode === mode));
+    });
+    resetBoard({ first: true });
+  }
+
+  // --------------------------------------------------------------- events ---
+  newRoundBtn.addEventListener("click", () => {
+    Sound.ensure();
+    resetBoard();
+  });
+
+  resetScoresBtn.addEventListener("click", () => {
+    state.scores = { bee: 0, blossom: 0 };
+    render();
+  });
+
+  modeButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      Sound.ensure();
+      setMode(btn.dataset.mode);
+    });
+  });
+
+  function updateMusicButton() {
+    musicBtn.setAttribute("aria-pressed", String(state.musicOn));
+    musicBtn.setAttribute(
+      "aria-label",
+      state.musicOn ? "Turn relaxing music off" : "Turn relaxing music on"
+    );
+    musicLabel.textContent = state.musicOn ? "Music on" : "Music off";
+    musicBtn.title = state.musicOn ? "Relaxing music is on" : "Relaxing music is off";
+  }
+
+  musicBtn.addEventListener("click", () => {
+    state.musicOn = !state.musicOn;
+    Sound.setMusic(state.musicOn);
+    updateMusicButton();
+  });
+
+  function firstGesture() {
+    Sound.ensure();
+    document.removeEventListener("pointerdown", firstGesture);
+    document.removeEventListener("keydown", firstGesture);
+  }
+  document.addEventListener("pointerdown", firstGesture, { passive: true });
+  document.addEventListener("keydown", firstGesture);
+
+  window.addEventListener("resize", () => {
+    sizeFx();
+    particles = [];
+  });
+
+  // ---------------------------------------------------------------- start ---
+  updateMusicButton();
+  render();
+  sizeFx();
+})();
+</script>
+</body>
+</html>
