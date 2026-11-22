@@ -12,6 +12,18 @@ Open `index.html` in any modern browser — no build step, server or dependencie
 - Three in a row wins; scores and round starters alternate.
 - The **Music** button in the top corner toggles the ambient soundtrack.
 
+## GitHub Pages
+
+Deployment is configured in `.github/workflows/pages.yml`. Every push to `main` publishes the game from `index.html`, and the workflow can also be started manually from the Actions tab.
+
+If the site is not live after the first push, enable the publishing source once:
+
+1. Open the repository's **Settings → Pages**.
+2. Under **Build and deployment**, set **Source** to **GitHub Actions**.
+3. Run **Deploy Hive Five to GitHub Pages** from the Actions tab (or push to `main` again).
+
+The site will then be available at `https://<owner>.github.io/hive-test2/`.
+
 ## Notes
 
 - Everything lives in one file: markup, styles, game logic, SVG artwork and audio.
