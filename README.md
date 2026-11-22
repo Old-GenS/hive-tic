@@ -22,6 +22,12 @@ If the site is not live after the first push, enable the publishing source once:
 2. Under **Build and deployment**, set **Source** to **GitHub Actions**.
 3. Run **Deploy Hive Five to GitHub Pages** from the Actions tab (or push to `main` again).
 
+Admins using the GitHub CLI can enable it in one command instead:
+
+```bash
+gh api --method POST "repos/$(gh repo view --json nameWithOwner -q .nameWithOwner)/pages" -f build_type=workflow
+```
+
 The site will then be available at `https://<owner>.github.io/hive-test2/`.
 
 ## Notes
